@@ -13,33 +13,32 @@ module RPMContrib
         old_perform_method = instance_method(:perform)
 
         define_method(:perform) do
-          NewRelic::Control.instance.setup_log # ensure we're not logging to STDOUT
-          NewRelic::Control.instance.log.info "Starting NewRelic injected perform"
+          puts "Starting NewRelic injected perform"
           class_name = (payload_class ||self.class).name
-          NewRelic::Control.instance.log.info "reseting stats"
+          puts "reseting stats"
           NewRelic::Agent.reset_stats if NewRelic::Agent.respond_to? :reset_stats
-          NewRelic::Control.instance.log.info "performing action with newrelic trace"
+          puts "performing action with newrelic trace"
           perform_action_with_newrelic_trace(:name => 'perform', :class_name => class_name,
                                              :category => 'OtherTransaction/ResqueJob') do
-            NewRelic::Control.instance.log.info "calling original perform method"
+            puts "calling original perform method"
             r = old_perform_method.bind(self).call
-            NewRelic::Control.instance.log.info "returned from original perform with #{r.inspect}"
+            puts "returned from original perform with #{r.inspect}"
             r
           end
           unless defined?(::Resque.before_child_exit)
-            NewRelic::Control.instance.log.info "calling agent shutdown"
+            puts "calling agent shutdown"
             NewRelic::Agent.shutdown
-            NewRelic::Control.instance.log.info "done calling agent shutdown"
+            puts "done calling agent shutdown"
           end
-          NewRelic::Control.instance.log.info "finally leaving injected perform"
+          puts "finally leaving injected perform"
         end
       end
 
       if defined?(::Resque.before_child_exit)
         ::Resque.before_child_exit do |worker|
-          NewRelic::Control.instance.log.info "calling agent shutdown in before_child_exit"
+          puts "calling agent shutdown in before_child_exit"
           NewRelic::Agent.shutdown
-          NewRelic::Control.instance.log.info "done calling agent shutdown"
+          puts "done calling agent shutdown"
         end
       end
     end
